@@ -28,7 +28,7 @@ export default function ResumeAnalyzer() {
   const [error, setError] = useState("")
 
   // Change this line:
-  const API_BASE_URL = "https://your-fastapi-backend.herokuapp.com"
+  const API_BASE_URL = "https://resumeradar-5v6x.onrender.com"
   // or wherever you've deployed your FastAPI backend
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
