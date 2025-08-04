@@ -4,10 +4,11 @@ import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'Resume Radar AI',
+  description: 'AI-powered resume analysis and job fit scoring tool',
+  // generator: 'v0.dev', ← Not needed
 }
+
 
 export default function RootLayout({
   children,
