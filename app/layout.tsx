@@ -7,9 +7,7 @@ import { Analytics } from '@vercel/analytics/react'
 export const metadata: Metadata = {
   title: 'Resume Radar AI',
   description: 'AI-powered resume analysis and job fit scoring tool',
-  // generator: 'v0.dev', ← Not needed
 }
-
 
 export default function RootLayout({
   children,
@@ -27,7 +25,10 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics /> {/* ✅ This enables Vercel Analytics */}
+      </body>
     </html>
   )
 }
