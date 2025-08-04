@@ -2,5 +2,6 @@ fastapi
 uvicorn
 PyMuPDF
 python-multipart
+onnxruntime
+scikit-learn
 numpy
-sentence-transformers[onnx]
