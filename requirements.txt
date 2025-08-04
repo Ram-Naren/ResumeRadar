@@ -1,7 +1,6 @@
-fastapi==0.111.0
-uvicorn==0.30.1
-transformers==4.41.2
-torch==2.5.1
-sentence-transformers==2.7.0
-PyMuPDF==1.23.25
-language-tool-python==2.7.1
+fastapi
+uvicorn
+python-multipart
+PyMuPDF
+sentence-transformers
+torch
