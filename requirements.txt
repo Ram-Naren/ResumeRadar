@@ -1,7 +1,5 @@
 fastapi
 uvicorn
-PyMuPDF
-python-multipart
 onnxruntime
-scikit-learn
 numpy
+pymupdf
