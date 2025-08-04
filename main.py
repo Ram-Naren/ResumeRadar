@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from sentence_transformers import SentenceTransformer
 import fitz  # PyMuPDF
+import numpy as np
 import re
-import torch
 
 app = FastAPI()
 
@@ -16,14 +16,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load sentence transformer
-model = SentenceTransformer("all-MiniLM-L6-v2")
+model = SentenceTransformer("all-MiniLM-L6-v2")  # RAM-friendly
 
 class InputData(BaseModel):
     resume: str
     jd: str = ""
 
-# ---------------- PDF Text Extraction ----------------
+# --------- PDF Extraction ---------
 @app.post("/extract-text")
 async def extract_text_from_pdf(file: UploadFile = File(...)):
     try:
@@ -32,40 +31,39 @@ async def extract_text_from_pdf(file: UploadFile = File(...)):
         extracted_text = ""
 
         for page in doc:
-            # Use safe method: 'text' gives string
             text = page.get_text("text")
             if text:
                 extracted_text += text + "\n"
-
         doc.close()
 
         if not extracted_text.strip():
-            return {"error": "PDF looks empty. Try pasting text manually."}
-
+            return {"error": "PDF appears empty or unreadable."}
         return {"text": extracted_text.strip()}
-
     except Exception as e:
         return {"error": f"Error reading PDF: {str(e)}"}
 
-# ---------------- Resume Analysis ----------------
-def get_embedding(text):
-    return model.encode([text], convert_to_tensor=True)
 
-def get_similarity(emb1, emb2):
-    return torch.nn.functional.cosine_similarity(emb1, emb2).item()
+# --------- Resume Analysis ---------
+def get_embedding(text):
+    return model.encode(text)
+
+def cosine_similarity(vec1, vec2):
+    vec1 = np.array(vec1)
+    vec2 = np.array(vec2)
+    dot = np.dot(vec1, vec2)
+    norm = np.linalg.norm(vec1) * np.linalg.norm(vec2)
+    return float(dot / norm) if norm != 0 else 0.0
 
 def count_matching_keywords(resume, jd_keywords):
     resume = resume.lower()
-    matched = {kw.lower() for kw in jd_keywords if kw and re.search(rf'\b{re.escape(kw)}\b', resume)}
-    return len(matched)
+    return sum(1 for kw in jd_keywords if re.search(rf'\b{re.escape(kw.lower())}\b', resume))
 
 def contains_action_verbs(text):
     verbs = ["led", "built", "created", "designed", "developed", "managed", "launched", "executed"]
     return sum(1 for v in verbs if re.search(rf"\b{v}\b", text.lower()))
 
 def check_ats_safe(text):
-    unsafe = any(tag in text.lower() for tag in ["<table", "<img", "columns:"])
-    return not unsafe
+    return not any(tag in text.lower() for tag in ["<table", "<img", "columns:"])
 
 def check_structure(text):
     sections = [r'education|academic', r'work\s+experience', r'skills', r'projects?', r'contact|email|phone']
@@ -94,7 +92,7 @@ async def analyze(data: InputData):
     if jd:
         resume_embed = get_embedding(resume)
         jd_embed = get_embedding(jd)
-        tailoring = get_similarity(resume_embed, jd_embed) * 30
+        tailoring = cosine_similarity(resume_embed, jd_embed) * 30
     else:
         tailoring = 20
     score += tailoring
@@ -102,8 +100,7 @@ async def analyze(data: InputData):
     # Skills match
     if jd:
         jd_keywords = re.findall(r'\b[a-zA-Z0-9+#]+\b', jd)
-        matched = count_matching_keywords(resume, jd_keywords)
-        skills_score = min(matched, 10) * 2
+        skills_score = min(count_matching_keywords(resume, jd_keywords), 10) * 2
         if skills_score < 10:
             suggestions.append("Match more keywords from the job description.")
     else:
