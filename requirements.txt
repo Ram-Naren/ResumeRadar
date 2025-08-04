@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-python-multipart
-PyMuPDF
 sentence-transformers
-torch
+PyMuPDF
+python-multipart
+numpy
