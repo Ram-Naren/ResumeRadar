@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-onnxruntime
-numpy
 pymupdf
-sentence-transformers==2.7.0
+scikit-learn
+numpy
