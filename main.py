@@ -1,14 +1,15 @@
 from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from sentence_transformers import SentenceTransformer
 import fitz  # PyMuPDF
 import numpy as np
 import re
+import onnxruntime
+from transformers import AutoTokenizer
 
 app = FastAPI()
 
-# Allow frontend access
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,13 +17,69 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model = SentenceTransformer("all-MiniLM-L6-v2")  # RAM-friendly
+# Load model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
+session = onnxruntime.InferenceSession("model.onnx", providers=["CPUExecutionProvider"])
 
+
+# ------------ Utility Functions -------------
+def get_embedding(text: str):
+    tokens = tokenizer(text, return_tensors="np", padding=True, truncation=True, max_length=512)
+    outputs = session.run(None, {
+        "input_ids": tokens["input_ids"],
+        "attention_mask": tokens["attention_mask"]
+    })
+
+    token_embeddings = outputs[0]  # shape: (1, seq_len, hidden_dim)
+    attention_mask = tokens["attention_mask"]
+    mask_expanded = attention_mask[..., None].astype(np.float32)
+
+    summed = np.sum(token_embeddings * mask_expanded, axis=1)
+    counts = np.clip(mask_expanded.sum(axis=1), a_min=1e-9, a_max=None)
+    return (summed / counts)[0]
+
+
+def cosine_similarity(vec1, vec2):
+    dot = np.dot(vec1, vec2)
+    norm = np.linalg.norm(vec1) * np.linalg.norm(vec2)
+    return float(dot / norm) if norm != 0 else 0.0
+
+
+def count_matching_keywords(resume, jd_keywords):
+    resume = resume.lower()
+    return sum(1 for kw in jd_keywords if re.search(rf'\b{re.escape(kw.lower())}\b', resume))
+
+
+def contains_action_verbs(text):
+    verbs = ["led", "built", "created", "designed", "developed", "managed", "launched", "executed"]
+    return sum(1 for v in verbs if re.search(rf"\b{v}\b", text.lower()))
+
+
+def check_ats_safe(text):
+    return not any(tag in text.lower() for tag in ["<table", "<img", "columns:"])
+
+
+def check_structure(text):
+    sections = [r'education|academic', r'work\s+experience', r'skills', r'projects?', r'contact|email|phone']
+    return sum(1 for sec in sections if re.search(sec, text.lower()))
+
+
+def check_bonus(text):
+    t = text.lower()
+    score = 0
+    if "project" in t: score += 1
+    if "internship" in t: score += 1
+    if re.search(r'\b(\d+%|\$\d+|reduced\s+\d+%)\b', t): score += 1
+    return score
+
+
+# ------------ API Models -------------
 class InputData(BaseModel):
     resume: str
     jd: str = ""
 
-# --------- PDF Extraction ---------
+
+# ------------ Routes -------------
 @app.post("/extract-text")
 async def extract_text_from_pdf(file: UploadFile = File(...)):
     try:
@@ -42,40 +99,6 @@ async def extract_text_from_pdf(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error reading PDF: {str(e)}"}
 
-
-# --------- Resume Analysis ---------
-def get_embedding(text):
-    return model.encode(text)
-
-def cosine_similarity(vec1, vec2):
-    vec1 = np.array(vec1)
-    vec2 = np.array(vec2)
-    dot = np.dot(vec1, vec2)
-    norm = np.linalg.norm(vec1) * np.linalg.norm(vec2)
-    return float(dot / norm) if norm != 0 else 0.0
-
-def count_matching_keywords(resume, jd_keywords):
-    resume = resume.lower()
-    return sum(1 for kw in jd_keywords if re.search(rf'\b{re.escape(kw.lower())}\b', resume))
-
-def contains_action_verbs(text):
-    verbs = ["led", "built", "created", "designed", "developed", "managed", "launched", "executed"]
-    return sum(1 for v in verbs if re.search(rf"\b{v}\b", text.lower()))
-
-def check_ats_safe(text):
-    return not any(tag in text.lower() for tag in ["<table", "<img", "columns:"])
-
-def check_structure(text):
-    sections = [r'education|academic', r'work\s+experience', r'skills', r'projects?', r'contact|email|phone']
-    return sum(1 for sec in sections if re.search(sec, text.lower()))
-
-def check_bonus(text):
-    t = text.lower()
-    score = 0
-    if "project" in t: score += 1
-    if "internship" in t: score += 1
-    if re.search(r'\b(\d+%|\$\d+|reduced\s+\d+%)\b', t): score += 1
-    return score
 
 @app.post("/analyze")
 async def analyze(data: InputData):
