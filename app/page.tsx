@@ -391,32 +391,33 @@ export default function ResumeAnalyzer() {
           </div>
         </div>
       </div>
+       {/* ✅ Footer Added Here */}
+      <footer className="relative z-10 mt-16 bg-white/80 backdrop-blur-md border-t border-gray-200 py-10 px-4">
+        <div className="max-w-4xl mx-auto text-center space-y-4">
+          <h2 className="text-2xl font-semibold text-gray-800">Connect with Me</h2>
+          <p className="text-gray-600">Feel free to reach out or follow me on social media!</p>
+          <div className="flex justify-center gap-6 mt-4">
+            <a
+              href="https://www.linkedin.com/in/ram-naren-b6141a218"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-700 hover:text-blue-900 text-lg font-medium underline"
+            >
+              LinkedIn
+            </a>
+            <a
+              href="https://www.instagram.com/thisisramnaren/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-pink-600 hover:text-pink-800 text-lg font-medium underline"
+            >
+              Instagram
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
 
-{/* Contact Section */}
-<footer className="relative z-10 mt-16 bg-white/80 backdrop-blur-md border-t border-gray-200 py-10 px-4">
-  <div className="max-w-4xl mx-auto text-center space-y-4">
-    <h2 className="text-2xl font-semibold text-gray-800">Connect with Me</h2>
-    <p className="text-gray-600">Feel free to reach out or follow me on social media!</p>
-    <div className="flex justify-center gap-6 mt-4">
-      <a
-        href="https://www.linkedin.com/in/ram-naren-b6141a218"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-700 hover:text-blue-900 text-lg font-medium underline"
-      >
-        LinkedIn
-      </a>
-      <a
-        href="https://www.instagram.com/thisisramnaren/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-pink-600 hover:text-pink-800 text-lg font-medium underline"
-      >
-        Instagram
-      </a>
-    </div>
-  </div>
-</footer>
+
